@@ -1,0 +1,6 @@
+---
+- name: Install Nginx and copy file
+  hosts: dev
+  become: true
+  roles:
+    - roles/nginx_role

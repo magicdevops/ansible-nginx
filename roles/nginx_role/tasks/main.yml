@@ -1,0 +1,56 @@
+---
+
+- name: Install Nginx
+  apt:
+    name:
+      - nginx
+    state: present
+  register:
+    nginxinstalled
+  delay: 10
+  retries: 12
+  until: nginxinstalled is successful
+  tags:
+    - nginxrevproxy
+    - packages
+
+- name: Install python-passlib for Python 3 hosts
+  apt:
+    name:
+      - "python3-passlib"
+    state: present
+  register:
+    result
+  delay: 10
+  retries: 12
+  until: result is successful
+  tags:
+    - nginxrevproxy
+    - packages
+  when:
+    - ansible_python['version']['major'] == 3
+
+- name: Install python-passlib for Python 2 hosts
+  apt:
+    name:
+      - "python-passlib"
+    state: present
+  register:
+    result
+  delay: 10
+  retries: 12
+  until: result is successful
+  tags:
+    - nginxrevproxy
+    - packages
+  when:
+    - ansible_python['version']['major'] == 2
+
+- name: Copy configuration files
+  copy:
+    src: "{{ role_path }}/{{ config_dir }}/"
+    dest: /etc/nginx/sites-enabled/
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Nginx    
