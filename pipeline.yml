@@ -1,0 +1,55 @@
+parameters:
+  - name: Environment
+    displayName: 'The target environment for deployment'
+    type: string
+    default: 'dev'
+    values:
+      - dev
+      - qa
+      - prod
+
+  - name: VariableGroup
+    displayName: 'The variable group holding Ansible username/password'
+    type: string
+
+jobs:
+  - deployment: ${{parameters.Environment}}_deployment
+    variables:
+      - group: ${{ parameters.VariableGroup }}  # Fetch variables from variable group
+      - name: ENVIRONMENT
+        value: ${{ parameters.Environment }}
+
+    displayName: Deploy ${{ parameters.Environment }}
+    timeoutInMinutes: 300
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+      # Step 1: Checkout the code
+      - checkout: self
+        persistCredentials: true
+        clean: true
+
+      # Step 2: Install Ansible
+      - task: Bash@3
+        displayName: 'Install Ansible'
+        inputs:
+          targetType: 'inline'
+          script: |
+            sudo apt-get update
+            sudo apt-get install -y ansible
+            ansible --version
+
+      # Step 3: Run Ansible Playbook
+      - task: Bash@3
+        displayName: 'Run Ansible Playbook'
+        inputs:
+          targetType: 'inline'
+          script: |
+            echo "Running Ansible Playbook for environment: ${{ parameters.Environment }}"
+            ansible-playbook ansible/playbook.yml \
+              -i ansible/inventory/${{ parameters.Environment }} \
+              --extra-vars "ansible_user=${ANSIBLE_USERNAME} ansible_password=${ANSIBLE_PASSWORD}"
+        env:
+          ANSIBLE_USERNAME: $(ansible_username)  # From variable group
+          ANSIBLE_PASSWORD: $(ansible_password)  # From variable group
